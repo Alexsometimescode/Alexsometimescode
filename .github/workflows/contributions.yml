@@ -1,0 +1,38 @@
+name: Refresh contribution graph
+
+on:
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
+  push:
+    paths:
+      - scripts/contributions.mjs
+      - .github/workflows/contributions.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: contribution-graph
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Generate calendar from GitHub
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/contributions.mjs
+      - name: Commit updated images
+        run: |
+          git add assets/contributions.svg assets/contributions-dark.svg
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Refresh contribution calendar'
+          git push
